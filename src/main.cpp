@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <pins_define.h>
+#include <DHTesp.h>
 
 #define BLYNK_TEMPLATE_ID "TMPL6gBAFxlB4"
 #define BLYNK_TEMPLATE_NAME "Smart Home"
@@ -13,6 +14,8 @@
 #define BLYNK_DEBUG
 
 #define APP_DEBUG
+
+DHTesp dht;
 
 byte light_sw_pin[3] = {Lsw1, Lsw2, Lsw3};
 bool light_sw_status[3];
@@ -28,6 +31,9 @@ bool fan_status[3];
 
 int temperature;
 int last_temp;
+
+int humidity;
+int last_humidity;
 
 int gas_percent;
 int last_gas_per;
@@ -77,7 +83,8 @@ void setup()
     pinMode(fan_pin[i], OUTPUT);
     pinMode(fan_sw_pin[i], INPUT_PULLUP);
   }
-  
+  pinMode(gas_pin, INPUT);
+  dht.setup(dht_pin, DHTesp::DHT11);
   Serial.begin(115200);
   BlynkEdgent.begin();
 }
@@ -158,12 +165,25 @@ void loop()
   static unsigned long temp_fillter;
   if ((millis() - temp_fillter) > 1000)
   {
+    temperature = dht.getTemperature();
     if (temperature != last_temp)
     {
       Blynk.virtualWrite(V6, temperature);
       last_temp = temperature;
     }
     temp_fillter = millis();
+  }
+  //huminity handdle
+  static unsigned long humidity_filter;
+  if ((millis() - humidity_filter) > 500)
+  {
+    humidity = dht.getHumidity();
+    if (humidity != last_humidity)
+    {
+      Blynk.virtualWrite(V6, humidity);
+      last_humidity = humidity;
+    }
+    humidity_filter = millis();
   }
 
   //gas sensor handdle
@@ -172,7 +192,7 @@ void loop()
   {
     if (gas_percent != last_gas_per)
     {
-      Blynk.virtualWrite(V6, gas_percent);
+      Blynk.virtualWrite(V7, gas_percent);
       last_gas_per = gas_percent;
     }
     gas_fillter = millis();

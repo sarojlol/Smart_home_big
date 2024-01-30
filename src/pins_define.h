@@ -16,3 +16,6 @@
 #define Fsw2        32
 #define Fsw3        23
 
+#define gas_pin     35
+#define dht_pin     4
+
