@@ -198,7 +198,7 @@ void loop()
     gas_alert_delay = millis();
     once_millis = false;
   }
-  if (((millis() - gas_alert_delay) > 30000) &! once_millis)
+  if (((millis() - gas_alert_delay) > 30000) &! once_millis && gas_alert)
   {
     gas_alert = false;
     once_millis = true;
