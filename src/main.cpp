@@ -178,6 +178,7 @@ void loop()
     gas_fillter = millis();
   }
 
+  //notifycation alert handle
   static bool gas_alert;
   static bool once_millis;
   static unsigned long gas_alert_delay;
