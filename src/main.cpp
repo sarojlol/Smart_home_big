@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <pins_define.h>
 
-#define BLYNK_TEMPLATE_ID "TMPL6b4ap6ORG"
+#define BLYNK_TEMPLATE_ID "TMPL6gBAFxlB4"
 #define BLYNK_TEMPLATE_NAME "Smart Home"
 //#define BLYNK_AUTH_TOKEN             "2oZEri2JfLLGI_s5OhaAA4ph4nSZrS4P"
 
@@ -176,5 +176,31 @@ void loop()
       last_gas_per = gas_percent;
     }
     gas_fillter = millis();
+  }
+
+  static bool gas_alert;
+  static bool once_millis;
+  static unsigned long gas_alert_delay;
+  if (gas_percent > 50 &! gas_alert)
+  {
+    Blynk.logEvent("gas_leaking");
+    once_millis = true;
+    gas_alert = true;
+  }
+  else if (gas_percent < 45)
+  {
+    gas_alert = false;
+    once_millis = false;
+  }
+
+  if (gas_alert && once_millis)
+  {
+    gas_alert_delay = millis();
+    once_millis = false;
+  }
+  if (((millis() - gas_alert_delay) > 30000) &! once_millis)
+  {
+    gas_alert = false;
+    once_millis = false;
   }
 }
