@@ -60,17 +60,17 @@ BLYNK_WRITE(V2)
 BLYNK_WRITE(V3)
 {
   fan_status[0] = param.asInt();
-  digitalWrite(fan_pin[0], fan_status[0]);
+  digitalWrite(fan_pin[0], !fan_status[0]);
 }
 BLYNK_WRITE(V4)
 {
   fan_status[1] = param.asInt();
-  digitalWrite(fan_pin[1], fan_status[1]);
+  digitalWrite(fan_pin[1], !fan_status[1]);
 }
 BLYNK_WRITE(V5)
 {
   fan_status[2] = param.asInt();
-  digitalWrite(fan_pin[2], fan_status[2]);
+  digitalWrite(fan_pin[2], !fan_status[2]);
 }
 
 
@@ -82,9 +82,11 @@ void setup()
     pinMode(light_sw_pin[i], INPUT_PULLUP);
     pinMode(fan_pin[i], OUTPUT);
     pinMode(fan_sw_pin[i], INPUT_PULLUP);
+    digitalWrite(led_pins[i], HIGH);
+    digitalWrite(fan_pin[i], HIGH);
   }
   pinMode(gas_pin, INPUT);
-  dht.setup(dht_pin, DHTesp::DHT11);
+  //dht.setup(dht_pin, DHTesp::DHT11);
   Serial.begin(115200);
   BlynkEdgent.begin();
 }
@@ -133,8 +135,8 @@ void loop()
   {
     for (int i = 0; i < 3; i++)
     {
-      fan_status[i] = digitalRead(fan_pin[i]);
-      if ((fan_status[i] == LOW) &! fan_sw_flag[i])
+      fan_sw_status[i] = digitalRead(fan_sw_pin[i]);
+      if ((fan_sw_status[i] == LOW) &! fan_sw_flag[i])
       {
         fan_status[i] =! fan_status[i];
         digitalWrite(fan_pin[i], !fan_status[i]);
@@ -153,7 +155,7 @@ void loop()
         fan_sw_flag[i] == true;
       }
 
-      else if ((fan_status[i] == HIGH) && fan_sw_flag[i])
+      else if ((fan_sw_status[i] == HIGH) && fan_sw_flag[i])
       {
         fan_sw_flag[i] = false;
       }
@@ -165,7 +167,7 @@ void loop()
   static unsigned long temp_fillter;
   if ((millis() - temp_fillter) > 1000)
   {
-    temperature = dht.getTemperature();
+    //temperature = dht.getTemperature();
     if (temperature != last_temp)
     {
       Blynk.virtualWrite(V6, temperature);
@@ -177,7 +179,7 @@ void loop()
   static unsigned long humidity_filter;
   if ((millis() - humidity_filter) > 500)
   {
-    humidity = dht.getHumidity();
+    //humidity = dht.getHumidity();
     if (humidity != last_humidity)
     {
       Blynk.virtualWrite(V6, humidity);

@@ -1,6 +1,6 @@
 //light
 #define LED1        13
-#define LED2        14
+#define LED2        12
 #define LED3        14
 
 #define Lsw1         27
