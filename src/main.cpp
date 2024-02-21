@@ -23,7 +23,7 @@ bool light_sw_flag[3];
 byte led_pins[3] = {LED1, LED2, LED3};
 bool led_status[3];
 
-byte fan_sw_pin[3] = {Fsw1, Fsw2, Fsw3};
+//byte fan_sw_pin[3] = {Fsw1, Fsw2, Fsw3};
 bool fan_sw_status[3];
 bool fan_sw_flag[3];
 byte fan_pin[3] = {fan1, fan2, fan3};
@@ -81,12 +81,14 @@ void setup()
     pinMode(led_pins[i], OUTPUT);
     pinMode(light_sw_pin[i], INPUT_PULLUP);
     pinMode(fan_pin[i], OUTPUT);
-    pinMode(fan_sw_pin[i], INPUT_PULLUP);
+    //pinMode(fan_sw_pin[i], INPUT_PULLUP);
     digitalWrite(led_pins[i], HIGH);
     digitalWrite(fan_pin[i], HIGH);
   }
   pinMode(gas_pin, INPUT);
-  //dht.setup(dht_pin, DHTesp::DHT11);
+  pinMode(buzzer_pin, OUTPUT);
+  digitalWrite(buzzer_pin, HIGH);
+  dht.setup(dht_pin, DHTesp::DHT11);
   Serial.begin(115200);
   BlynkEdgent.begin();
 }
@@ -118,7 +120,7 @@ void loop()
           Blynk.virtualWrite(V2, led_status[2]);
           break;
         }
-        light_sw_flag[i] == true;
+        light_sw_flag[i] = true;
       }
 
       else if ((light_sw_status[i] == HIGH) && light_sw_flag[i])
@@ -130,44 +132,44 @@ void loop()
   }
 
   //fan button hanndle
-  static unsigned long fan_sw_filter;
-  if ((millis() - fan_sw_filter) > 10)
-  {
-    for (int i = 0; i < 3; i++)
-    {
-      fan_sw_status[i] = digitalRead(fan_sw_pin[i]);
-      if ((fan_sw_status[i] == LOW) &! fan_sw_flag[i])
-      {
-        fan_status[i] =! fan_status[i];
-        digitalWrite(fan_pin[i], !fan_status[i]);
-        switch (i)
-        {
-        case 0:
-          Blynk.virtualWrite(V3, fan_status[0]);
-          break;
-        case 1:
-          Blynk.virtualWrite(V4, fan_status[1]);
-          break;
-        case 2:
-          Blynk.virtualWrite(V5, fan_status[2]);
-          break;
-        }
-        fan_sw_flag[i] == true;
-      }
+  // static unsigned long fan_sw_filter;
+  // if ((millis() - fan_sw_filter) > 10)
+  // {
+  //   for (int i = 0; i < 3; i++)
+  //   {
+  //     fan_sw_status[i] = digitalRead(fan_sw_pin[i]);
+  //     if ((fan_sw_status[i] == LOW) &! fan_sw_flag[i])
+  //     {
+  //       fan_status[i] =! fan_status[i];
+  //       digitalWrite(fan_pin[i], !fan_status[i]);
+  //       switch (i)
+  //       {
+  //       case 0:
+  //         Blynk.virtualWrite(V3, fan_status[0]);
+  //         break;
+  //       case 1:
+  //         Blynk.virtualWrite(V4, fan_status[1]);
+  //         break;
+  //       case 2:
+  //         Blynk.virtualWrite(V5, fan_status[2]);
+  //         break;
+  //       }
+  //       fan_sw_flag[i] == true;
+  //     }
 
-      else if ((fan_sw_status[i] == HIGH) && fan_sw_flag[i])
-      {
-        fan_sw_flag[i] = false;
-      }
-    }
-    fan_sw_filter = millis();
-  }
+  //     else if ((fan_sw_status[i] == HIGH) && fan_sw_flag[i])
+  //     {
+  //       fan_sw_flag[i] = false;
+  //     }
+  //   }
+  //   fan_sw_filter = millis();
+  // }
 
   //temperature sensor handel
   static unsigned long temp_fillter;
   if ((millis() - temp_fillter) > 1000)
   {
-    //temperature = dht.getTemperature();
+    temperature = dht.getTemperature();
     if (temperature != last_temp)
     {
       Blynk.virtualWrite(V6, temperature);
@@ -177,12 +179,12 @@ void loop()
   }
   //huminity handdle
   static unsigned long humidity_filter;
-  if ((millis() - humidity_filter) > 500)
+  if ((millis() - humidity_filter) > 1000)
   {
-    //humidity = dht.getHumidity();
+    humidity = dht.getHumidity();
     if (humidity != last_humidity)
     {
-      Blynk.virtualWrite(V6, humidity);
+      Blynk.virtualWrite(V7, humidity);
       last_humidity = humidity;
     }
     humidity_filter = millis();
@@ -190,11 +192,12 @@ void loop()
 
   //gas sensor handdle
   static unsigned long gas_fillter;
-  if ((millis() - gas_fillter) > 500)
+  if ((millis() - gas_fillter) > 1000)
   {
+    gas_percent = map(analogRead(gas_pin), 2000, 4095, 0, 100);
     if (gas_percent != last_gas_per)
     {
-      Blynk.virtualWrite(V7, gas_percent);
+      Blynk.virtualWrite(V8, gas_percent);
       last_gas_per = gas_percent;
     }
     gas_fillter = millis();
@@ -202,11 +205,18 @@ void loop()
 
   //notifycation alert handle
   static bool gas_alert;
+  static bool buzzer_alert;
   static bool once_millis;
+  static bool buzzer_status;
   static unsigned long gas_alert_delay;
+  static unsigned long buzzer_toggle;
   if (gas_percent > 50 &! gas_alert)
   {
-    Blynk.logEvent("gas_leaking");
+    once_millis = true;
+    buzzer_alert = true;
+    buzzer_status  = true;
+    gas_alert_delay = millis();
+    buzzer_toggle = millis();
     once_millis = true;
     gas_alert = true;
   }
@@ -214,16 +224,20 @@ void loop()
   {
     gas_alert = false;
     once_millis = false;
+    buzzer_alert = false;
+    digitalWrite(buzzer_pin, HIGH);
   }
 
-  if (gas_alert && once_millis)
+  if (((millis() - gas_alert_delay) > 3000) && once_millis)
   {
-    gas_alert_delay = millis();
+    Blynk.logEvent("gas_leaking");
     once_millis = false;
   }
-  if (((millis() - gas_alert_delay) > 30000) &! once_millis && gas_alert)
+
+  if (((millis() - buzzer_toggle) > 500) && buzzer_alert)
   {
-    gas_alert = false;
-    once_millis = true;
+    buzzer_status =! buzzer_status;
+    digitalWrite(buzzer_pin, buzzer_status);
+    buzzer_toggle = millis();
   }
 }
